@@ -13,8 +13,8 @@ const statusRow string = `;
           cast(@@rowcount as bigint) rows_affected
 `
 const statusRowSybase125 string = `
-   select cast(coalesce(@@IDENTITY, -1) as int) last_insert_id, 
-          cast(@@rowcount as int) rows_affected
+   select cast(coalesce(@@IDENTITY, -1) as bigint) last_insert_id, 
+          cast(@@rowcount as bigint) rows_affected
 `
 
 //Execute sql query with arguments.
@@ -43,13 +43,17 @@ func (conn *Conn) ExecuteSql(query string, params ...driver.Value) ([]*Result, e
 	return conn.Exec(sql)
 }
 
+// executeSqlSybase125 prepares sybase 12.5 compatible sql statement
+// sql statement appends statement for last_inserted_id and rows_affected results
+// Note: Due to @@IDENTITY limitations, LastInsertedID will not result in an error if used after an update or delete
+//       @@IDENTITY returns the last inserted id for the scope of the connection, regardless of the scope that produced it
 func (conn *Conn) executeSqlSybase125(query string, params ...driver.Value) ([]*Result, error) {
-	statement, numParams := query2Statement(query)
+	_, numParams := query2Statement(query)
 	if numParams != len(params) {
 		return nil, fmt.Errorf("Incorrect number of params, expecting %d got %d", numParams, len(params))
 	}
 
-	statement += statusRowSybase125
+	query += statusRowSybase125
 	sql := strings.Replace(query, "?", "$bindkey", -1)
 	re, _ := regexp.Compile(`(?P<bindkey>\$bindkey)`)
 	matches := re.FindAllSubmatchIndex([]byte(sql), -1)
@@ -58,9 +62,8 @@ func (conn *Conn) executeSqlSybase125(query string, params ...driver.Value) ([]*
 		_, escapedValue, _ := go2SqlDataType(params[i])
 		sql = fmt.Sprintf("%s", strings.Replace(sql, "$bindkey", escapedValue, 1))
 	}
-
 	if numParams == 0 {
-		sql = fmt.Sprintf("%s", statement)
+		sql = fmt.Sprintf("%s", query)
 	}
 	return conn.Exec(sql)
 }

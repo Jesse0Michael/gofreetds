@@ -3,11 +3,11 @@ package freetds
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"os"
 )
 
 func open(t *testing.T) (*sql.DB, error, bool) {
@@ -43,7 +43,6 @@ func TestMssqlConnOpenSybase125(t *testing.T) {
 	assert.IsType(t, &MssqlConn{}, c)
 	c.Close()
 }
-
 
 func TestGoSqlDbQueryRow(t *testing.T) {
 	db, err, _ := open(t)
@@ -94,10 +93,7 @@ func TestGoSqlPrepareQuery(t *testing.T) {
 func TestLastInsertIdRowsAffected(t *testing.T) {
 	db, _, sybase125 := open(t)
 	defer db.Close()
-	if sybase125 {
-		t.Skip("LastInsertId and RowsEffective not returned in Sybase 12.5")
-	}
-	createTestTable(t, db, sybase125,"test_last_insert_id", "")
+	createTestTable(t, db, sybase125, "test_last_insert_id", "")
 	r, err := db.Exec("insert into [test_last_insert_id] values(?)", "pero")
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
@@ -122,7 +118,9 @@ func TestLastInsertIdRowsAffected(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, r)
 	id, err = r.LastInsertId()
-	assert.NotNil(t, err)
+	if !sybase125 {
+		assert.NotNil(t, err)
+	}
 	ra, err = r.RowsAffected()
 	assert.Nil(t, err)
 	assert.EqualValues(t, ra, 2)
