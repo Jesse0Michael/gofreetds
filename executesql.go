@@ -13,8 +13,8 @@ const statusRow string = `;
           cast(@@rowcount as bigint) rows_affected
 `
 const statusRowSybase125 string = `
-   select cast(coalesce(@@IDENTITY, -1) as bigint) last_insert_id, 
-          cast(@@rowcount as bigint) rows_affected
+   select cast(coalesce(@@IDENTITY, -1) as int) last_insert_id, 
+          cast(@@rowcount as int) rows_affected
 `
 
 //Execute sql query with arguments.
